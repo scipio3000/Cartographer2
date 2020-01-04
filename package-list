@@ -1,0 +1,17 @@
+io.github.bananapuncher714.cartographer.core
+io.github.bananapuncher714.cartographer.core.api
+io.github.bananapuncher714.cartographer.core.api.events
+io.github.bananapuncher714.cartographer.core.api.events.chunk
+io.github.bananapuncher714.cartographer.core.api.events.minimap
+io.github.bananapuncher714.cartographer.core.api.events.module
+io.github.bananapuncher714.cartographer.core.api.map
+io.github.bananapuncher714.cartographer.core.command
+io.github.bananapuncher714.cartographer.core.file
+io.github.bananapuncher714.cartographer.core.map
+io.github.bananapuncher714.cartographer.core.map.palette
+io.github.bananapuncher714.cartographer.core.map.process
+io.github.bananapuncher714.cartographer.core.map.text
+io.github.bananapuncher714.cartographer.core.module
+io.github.bananapuncher714.cartographer.core.renderer
+io.github.bananapuncher714.cartographer.core.util
+io.github.bananapuncher714.cartographer.tinyprotocol
