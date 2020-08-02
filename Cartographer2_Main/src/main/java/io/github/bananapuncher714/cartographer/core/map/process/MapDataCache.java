@@ -257,8 +257,9 @@ public class MapDataCache {
 	 * A location that requires loading
 	 */
 	public void addToProcessQueue( ChunkLocation location ) {
-		forcedLoading.add( location );
-		ChunkLoadListener.loadChunk( location );
+		// TODO: change?
+		//forcedLoading.add( location );
+		//ChunkLoadListener.loadChunk( location );
 	}
 	
 	public void process( ChunkLocation location ) {

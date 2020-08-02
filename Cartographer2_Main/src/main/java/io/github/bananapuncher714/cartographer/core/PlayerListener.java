@@ -43,7 +43,7 @@ public class PlayerListener implements Listener {
 		MapInteraction interaction = event.isSneaking() ? MapInteraction.SHIFT : MapInteraction.UNSHIFT;
 		plugin.getMapManager().activate( event.getPlayer(), interaction );
 	}
-	
+	/*
 	@EventHandler
 	private void onPlayerInteractEvent( PlayerInteractEvent event ) {
 		if ( !plugin.getHandler().getUtil().isValidHand( event ) ) {
@@ -104,7 +104,7 @@ public class PlayerListener implements Listener {
 			}
 			event.setCancelled( true );
 		}
-	}
+	}*/
 	
 	// This is probably the laggiest part of the plugin, mostly since the BlockPhysicsEvent fires a ton
 	// The more players, or the more stuff going on the more lag, but the solution is just to get a better computer

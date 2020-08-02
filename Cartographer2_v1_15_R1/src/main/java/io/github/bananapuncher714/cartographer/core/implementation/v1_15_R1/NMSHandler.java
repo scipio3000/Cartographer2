@@ -177,7 +177,7 @@ public class NMSHandler implements PacketHandler {
 	
 	@Override
 	public Object onPacketInterceptIn( Player viewer, Object packet ) {
-		if ( packet instanceof PacketPlayInBlockDig ) {
+		/*if ( packet instanceof PacketPlayInBlockDig ) {
 			// Check for the drop packet
 			PacketPlayInBlockDig digPacket = ( PacketPlayInBlockDig ) packet;
 
@@ -193,7 +193,7 @@ public class NMSHandler implements PacketHandler {
 					return null;
 				}
 			}
-		}
+		}*/
 		return packet;
 	}
 	

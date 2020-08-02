@@ -47,41 +47,6 @@
 		</dependency>
 		<dependency>
 			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_8_R3</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_9_R2</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_10_R1</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_11_R1</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_12_R1</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_13_R2</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
-			<artifactId>Cartographer2_v1_14_R1</artifactId>
-			<version>${master.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bananapuncher714</groupId>
 			<artifactId>Cartographer2_v1_15_R1</artifactId>
 			<version>${master.version}</version>
 		</dependency>
