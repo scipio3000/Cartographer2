@@ -24,7 +24,13 @@ render-delay: 1
 tick-limit: 18
 
 # Delay between updating blocks that change on the map, like water flowing and blocks growing.
+# Change this to 0 if you want to disable updating for block physics events.
 block-update-tick-delay: 5
+
+# Determines whether the player should be allowed to drop the minimap
+prevent-drop: true
+# Whether or not to use packets or the item drop event
+use-drop-packet: true
 
 chunk:
   # Regular chunk processing
@@ -46,3 +52,10 @@ chunk:
   load-per-update: 20
   # Amount of chunks that get generated per update, if they don't exist
   generate-per-update: 1
+ 
+# Whether or not to dither the missing map image. Works best with images of real things
+dither-missing: false
+
+# The default locale
+# 'default' is always present
+default-locale: "default"

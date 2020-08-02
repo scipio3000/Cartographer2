@@ -61,10 +61,8 @@ public class ModuleLoader {
 	}
 	
 	/**
-	 * Load a module with the given description and file.
+	 * Load a module with the given description.
 	 * 
-	 * @param file
-	 * The module jar. Cannot be null.
 	 * @param description
 	 * A {@link ModuleDescription} of the module being loaded. Cannot be null.
 	 * @return
@@ -93,7 +91,7 @@ public class ModuleLoader {
 	 * 
 	 * @param module
 	 * The module to unload. Cannot be null.
-	 * @param return
+	 * @return
 	 * Whether or not this module was unloaded.
 	 */
 	public boolean unload( Module module ) {
@@ -138,9 +136,10 @@ public class ModuleLoader {
 		
 		Set< String > classes = loader.getClassNames();
 		
-		for ( SettingState< ? > state : module.getSettingStates() ) {
+		for ( SettingState< ? > state : module.getTracker().getSettings() ) {
 			MapViewer.removeSetting( state );
 		}
+		module.getTracker().getSettings().clear();
 		
 		// Remove integration from maps
 		MinimapManager manager = plugin.getMapManager();
@@ -286,7 +285,7 @@ public class ModuleLoader {
 		
 		JsonObject object = element.getAsJsonObject();
 		
-		if ( !( object.has( "name" ) && object.has( "main" ) && object.has( "author" ) && object.has( "description" ) && object.has( "version" ) ) ) {
+		if ( !( object.has( "name" ) && object.has( "main" ) && object.has( "author" ) && object.has( "version" ) ) ) {
 			throw new IllegalArgumentException( "Missing required information from module.json! (name/main/author/version)" );
 		}
 		

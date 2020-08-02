@@ -16,6 +16,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -43,6 +44,8 @@ import io.netty.channel.ChannelPromise;
  * @author Kristian
  */
 public abstract class TinyProtocol {
+	private static final long TIMEOUT = 10_000;
+	
 	private static final AtomicInteger ID = new AtomicInteger(0);
 
 	// Used in order to lookup a channel
@@ -188,25 +191,68 @@ public abstract class TinyProtocol {
 		listener = new Listener() {
 
 			@EventHandler(priority = EventPriority.LOWEST)
-			public final void onPlayerLogin(PlayerLoginEvent e) {
+			private final void onPlayerLogin( PlayerLoginEvent e) {
 				if (closed)
 					return;
-
-				Channel channel = getChannel(e.getPlayer());
-
-				// Don't inject players that have been explicitly uninjected
-				if (!uninjectedChannels.contains(channel)) {
-					injectPlayer(e.getPlayer());
-				}
+				
+				Bukkit.getScheduler().runTaskAsynchronously( plugin, () -> injectPlayerTimeout( e.getPlayer(), TIMEOUT ) );
+			}
+			
+			@EventHandler( priority = EventPriority.LOWEST )
+			private final void onPlayerQuitEvent( PlayerQuitEvent event ) {
+				// Remove all channels cached for the player
+				channelLookup.remove( event.getPlayer().getName() );
+				uuidChannelLookup.remove( event.getPlayer().getUniqueId() );
 			}
 
 			@EventHandler
-			public final void onPluginDisable(PluginDisableEvent e) {
+			private final void onPluginDisable(PluginDisableEvent e) {
 				if (e.getPlugin().equals(plugin)) {
 					close();
 				}
 			}
-
+			
+			private void injectPlayerTimeout( Player player, long timeout ) {
+				long start = System.currentTimeMillis();
+				long current = System.currentTimeMillis();
+				Channel channel = null;
+				while ( channel == null && current - start < timeout ) {
+					try {
+						channel = getChannel( player );
+					} catch ( NullPointerException e ) {
+						try {
+							Thread.sleep( 20 );
+						} catch ( InterruptedException exception ) {
+							e.printStackTrace();
+						}
+					}
+					current = System.currentTimeMillis();
+				}
+				
+				start = System.currentTimeMillis();
+				
+				// Don't inject players that have been explicitly uninjected
+				if ( channel != null ) {
+					if (!uninjectedChannels.contains(channel)) {
+						// Sometimes the channel doesn't contain packet_handler immediately
+						while ( current - start < timeout ) {
+							try {
+								injectPlayer( player );
+								break;
+							} catch ( NoSuchElementException e ) {
+								try {
+									Thread.sleep( 20 );
+								} catch ( InterruptedException exception ) {
+									e.printStackTrace();
+								}
+								current = System.currentTimeMillis();
+							}
+						}
+					}
+				} else {
+					plugin.getLogger().severe( "Was not able to inject channel for " + player.getName() );
+				}
+			}
 		};
 
 		plugin.getServer().getPluginManager().registerEvents(listener, plugin);
@@ -375,7 +421,6 @@ public abstract class TinyProtocol {
 	 * Add a custom channel handler to the given channel.
 	 * 
 	 * @param channel - the channel to inject.
-	 * @return The intercepted channel, or NULL if it has already been injected.
 	 */
 	public void injectChannel(Channel channel) {
 		injectChannelInternal(channel);

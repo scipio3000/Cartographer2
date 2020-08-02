@@ -13,9 +13,11 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import io.github.bananapuncher714.cartographer.core.api.BooleanOption;
 import io.github.bananapuncher714.cartographer.core.api.SimpleImage;
+import io.github.bananapuncher714.cartographer.core.api.events.player.MapViewerChangeSettingEvent;
 import io.github.bananapuncher714.cartographer.core.api.setting.SettingState;
 import io.github.bananapuncher714.cartographer.core.api.setting.SettingStateBoolean;
 import io.github.bananapuncher714.cartographer.core.api.setting.SettingStateBooleanOption;
+import io.github.bananapuncher714.cartographer.core.api.setting.SettingStateLocale;
 
 /**
  * Individual per player settings that take priority over Cartographer's default settings but must conform to minimap settings.
@@ -27,6 +29,7 @@ public class MapViewer {
 	public static final SettingStateBoolean SHOWNAME = SettingStateBoolean.of( "showname", false, true );
 	public static final SettingStateBoolean CURSOR = SettingStateBoolean.of( "cursor", false, false );
 	public static final SettingStateBooleanOption ROTATE = SettingStateBooleanOption.of( "rotate", false, BooleanOption.TRUE );
+	public static final SettingStateLocale LOCALE = new SettingStateLocale( "locale", false );
 	
 	private static Map< String, SettingState< ? > > SETTING_STATES = new HashMap< String, SettingState< ? > >();
 	
@@ -34,6 +37,7 @@ public class MapViewer {
 		addSetting( SHOWNAME );
 		addSetting( CURSOR );
 		addSetting( ROTATE );
+		addSetting( LOCALE );
 	}
 	
 	// This stuff gets saved
@@ -101,7 +105,10 @@ public class MapViewer {
 	
 	public < T extends Comparable< T > > void setSetting( SettingState< T > state, T val ) {
 		if ( SETTING_STATES.containsKey( state.getId() ) ) {
-			settings.put( state.getId(), state.convertToString( val ) );
+			MapViewerChangeSettingEvent< T > event = new MapViewerChangeSettingEvent<>( this, state, val );
+			event.callEvent();
+			
+			settings.put( state.getId(), state.convertToString( event.getNewVal() ) );
 		} else {
 			throw new IllegalArgumentException( state.getId() + " is not a registered state!" );
 		}
@@ -143,18 +150,48 @@ public class MapViewer {
 		return true;
 	}
 	
+	/**
+	 * Register a custom setting.
+	 * 
+	 * @param state
+	 */
 	public static void addSetting( SettingState< ? > state ) {
-		SETTING_STATES.put( state.getId(), state );
+		String id = state.getId();
+		if ( SETTING_STATES.containsKey( id ) ) {
+			SettingState< ? > s = SETTING_STATES.get( id );
+			if ( s != state ) {
+				throw new IllegalArgumentException( String.format( "Attempted to register existing setting %s!", id ) );
+			}
+		} else {
+			SETTING_STATES.put( id, state );
+		}
+		
 	}
 	
+	/**
+	 * Unregister a custom setting.
+	 * 
+	 * @param state
+	 */
 	public static void removeSetting( SettingState< ? > state ) {
 		SETTING_STATES.remove( state.getId() );
 	}
 	
+	/**
+	 * Get the state with the specified id.
+	 * 
+	 * @param id
+	 * @return
+	 */
 	public static SettingState< ? > getState( String id ) {
 		return SETTING_STATES.get( id );
 	}
 	
+	/**
+	 * Get all the states available.
+	 * 
+	 * @return
+	 */
 	public static Collection< SettingState< ? > > getStates() {
 		return SETTING_STATES.values();
 	}

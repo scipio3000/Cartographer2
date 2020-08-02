@@ -39,8 +39,8 @@ import io.github.bananapuncher714.cartographer.core.map.MapViewer;
 import io.github.bananapuncher714.cartographer.core.map.Minimap;
 import io.github.bananapuncher714.cartographer.core.map.menu.MapInteraction;
 import io.github.bananapuncher714.cartographer.core.map.menu.MapMenu;
-import io.github.bananapuncher714.cartographer.core.map.process.ChunkLoadListener;
 import io.github.bananapuncher714.cartographer.core.map.process.MapDataCache;
+import io.github.bananapuncher714.cartographer.core.map.process.MapDataCache.ChunkState;
 import io.github.bananapuncher714.cartographer.core.util.FailSafe;
 import io.github.bananapuncher714.cartographer.core.util.JetpImageUtil;
 
@@ -146,9 +146,11 @@ public class CartographerRenderer extends MapRenderer {
 					int x = ( int ) Math.max( -128, Math.min( 127, setting.getCursorX() ) );
 					int y = ( int ) Math.max( -128, Math.min( 127, setting.getCursorY() ) );
 					
+					List< MapCursor > cursors = new ArrayList< MapCursor >( setting.menu.getCursors() );
 					MapCursor cursor = Cartographer.getInstance().getHandler().constructMapCursor( x, y, 0, type, null );
+					cursors.add( cursor );
 					
-					plugin.getHandler().sendDataTo( id, data, new MapCursor[] { cursor }, entry.getKey() );
+					plugin.getHandler().sendDataTo( id, data, cursors.toArray( new MapCursor[ cursors.size() ] ), entry.getKey() );
 				}
 				continue;
 			}
@@ -157,7 +159,12 @@ public class CartographerRenderer extends MapRenderer {
 			Minimap map = setting.map == null ? null : plugin.getMapManager().getMinimaps().get( setting.map );
 			if ( map == null ) {
 				SimpleImage missingImage = plugin.getMissingMapImage();
-				byte[] missingMapData = JetpImageUtil.dither( missingImage.getWidth(), missingImage.getImage() );
+				byte[] missingMapData;
+				if ( plugin.isDitherMissingMapImage() ) {
+					missingMapData = JetpImageUtil.dither2Minecraft( missingImage.getImage(), missingImage.getWidth() ).array();
+				} else {
+					missingMapData = JetpImageUtil.simplify( missingImage.getImage() );
+				}
 				plugin.getHandler().sendDataTo( id, missingMapData, null, entry.getKey() );
 				continue;
 			}
@@ -169,7 +176,11 @@ public class CartographerRenderer extends MapRenderer {
 				}
 				byte[] data = new byte[ 128 * 128 ];
 				if ( image != null ) {
-					data = JetpImageUtil.dither( image.getWidth(), image.getImage() );
+					if ( map.getSettings().isDitherBlacklisted() ) {
+						data = JetpImageUtil.dither2Minecraft( image.getImage(), image.getWidth() ).array();
+					} else {
+						data = JetpImageUtil.simplify( image.getImage() );
+					}
 				}
 				CartographerRendererDisabledEvent event = new CartographerRendererDisabledEvent( this, data );
 				event.callEvent();
@@ -242,19 +253,36 @@ public class CartographerRenderer extends MapRenderer {
 			// Queue the locations that need loading
 			for ( BigChunkLocation location : info.needsRender ) {
 				// TODO Check if the location needs loading and load somewhere else maybe?
+				/*
+				 *  TODO Keep track of the current state of the chunk data
+				 * A chunk can have one of the following states:
+				 * NONE						The chunk is not being processed, nor has it undergone processing
+				 * WAITING_FOR_LOAD			The chunk is waiting to be loaded from the vanilla world
+				 * WAITING_FOR_PROCESSING	The chunk is waiting to be processed
+				 * PROCESSING				The chunk is currently being processed
+				 * CACHED					The chunk has been cached
+				 * WAITING_FOR_FILE_LOAD	The chunk is waiting to be loaded in from Cartographer2 local files
+				 * FILE_LOADING				The chunk is being loaded in from Cartographer2 files
+				 * WAITING_FOR_SAVING		The chunk is waiting to be saved to file
+				 * SAVING					The chunk is being saved to file
+				 */
 				int cx = location.getX() << 4;
 				int cz = location.getZ() << 4;
 				boolean renderRequired = false;
 				for ( int x = 0; x < 16 && !renderRequired; x++ ) {
 					for ( int z = 0; z < 16 && !renderRequired; z++ ) {
 						ChunkLocation cLocation = new ChunkLocation( location.getWorld(), cx + x, cz + z );
-						renderRequired = info.cache.requiresGeneration( cLocation ) && !ChunkLoadListener.isLoading( cLocation );
+						// Check if this location has a state of NONE
+						ChunkState state = MapDataCache.getStateOf( info.map, cLocation );
+						
+						// Add this location only if a chunk isn't cached or involved in anything
+						renderRequired = state == ChunkState.NONE;
 					}
 				}
 				if ( renderRequired ) {
+					// Try to load it from file first
 					info.map.getQueue().load( location );
 				}
-				
 			}
 			
 			// Send the packet
@@ -336,7 +364,7 @@ public class CartographerRenderer extends MapRenderer {
 	public void interact( Player player, MapInteraction interaction ) {
 		if ( interaction == MapInteraction.LEFT ) {
 			// Disregard left clicks since they trigger when a player presses 'Q' as well.
-			return;
+//			return;
 		}
 		
 		PlayerSetting setting = settings.get( player.getUniqueId() );
@@ -378,6 +406,16 @@ public class CartographerRenderer extends MapRenderer {
 			}
 		}
 		this.mapId = map == null ? null : map.getId();
+	}
+	
+	public void resetCursorFor( Player player ) {
+		if ( settings.containsKey( player.getUniqueId() ) ) {
+			Location location = player.getLocation();
+			PlayerSetting setting = settings.get( player.getUniqueId() );
+			setting.setCursorX( 0 );
+			setting.setCursorY( 0 );
+			setting.setCursorYaw( ( ( location.getYaw() % 360 ) + 360 ) % 360 );
+		}
 	}
 	
 	// Since Paper only updates 4 times a tick, we'll have to compensate and manually update 20 times a tick instead
@@ -470,9 +508,9 @@ public class CartographerRenderer extends MapRenderer {
 				double pitch = location.getPitch();
 				
 				pitch = Math.max( 50, Math.min( 90, pitch ) );
-				pitch -= 70;
-				pitch = pitch / 20.0;
-				setting.setCursorY( pitch * 127 );
+				pitch -= 50;
+				pitch = pitch / 40.0;
+				setting.setCursorY( ( pitch * 255 ) - 128 );
 			}
 			
 			setting.rotating = rotating;

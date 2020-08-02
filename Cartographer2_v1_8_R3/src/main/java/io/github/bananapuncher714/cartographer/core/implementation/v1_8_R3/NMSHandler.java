@@ -3,10 +3,10 @@ package io.github.bananapuncher714.cartographer.core.implementation.v1_8_R3;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -39,6 +39,7 @@ import net.minecraft.server.v1_8_R3.MinecraftKey;
 import net.minecraft.server.v1_8_R3.MinecraftServer;
 import net.minecraft.server.v1_8_R3.PacketPlayInBlockDig;
 import net.minecraft.server.v1_8_R3.PacketPlayInBlockDig.EnumPlayerDigType;
+import net.minecraft.server.v1_8_R3.PacketPlayInSettings;
 import net.minecraft.server.v1_8_R3.PacketPlayOutMap;
 
 public class NMSHandler implements PacketHandler {
@@ -134,21 +135,26 @@ public class NMSHandler implements PacketHandler {
 	
 	@Override
 	public Object onPacketInterceptIn( Player viewer, Object packet ) {
-		if ( packet instanceof PacketPlayInBlockDig ) {
-			// Check for the drop packet
-			PacketPlayInBlockDig digPacket = ( PacketPlayInBlockDig ) packet;
-
-			EnumPlayerDigType type = digPacket.c();
-			if ( type == EnumPlayerDigType.DROP_ALL_ITEMS || type == EnumPlayerDigType.DROP_ITEM ) {
-				ItemStack item = viewer.getEquipment().getItemInHand();
-				if ( Cartographer.getInstance().getMapManager().isMinimapItem( item ) ) {
-					// Update the player's hand
-					viewer.getEquipment().setItemInHand( item );
-					
-					// Activate the drop
-					Cartographer.getInstance().getMapManager().activate( viewer, type == EnumPlayerDigType.DROP_ALL_ITEMS ? MapInteraction.CTRLQ : MapInteraction.Q );
-					return null;
+		if ( viewer != null ) {
+			if ( packet instanceof PacketPlayInBlockDig && Cartographer.getInstance().isPreventDrop() && Cartographer.getInstance().isUseDropPacket() ) {
+				// Check for the drop packet
+				PacketPlayInBlockDig digPacket = ( PacketPlayInBlockDig ) packet;
+	
+				EnumPlayerDigType type = digPacket.c();
+				if ( type == EnumPlayerDigType.DROP_ALL_ITEMS || type == EnumPlayerDigType.DROP_ITEM ) {
+					ItemStack item = viewer.getEquipment().getItemInHand();
+					if ( Cartographer.getInstance().getMapManager().isMinimapItem( item ) ) {
+						// Update the player's hand
+						viewer.getEquipment().setItemInHand( item );
+						
+						// Activate the drop
+						Cartographer.getInstance().getMapManager().activate( viewer, type == EnumPlayerDigType.DROP_ALL_ITEMS ? MapInteraction.CTRLQ : MapInteraction.Q );
+						return null;
+					}
 				}
+			} else if ( packet instanceof PacketPlayInSettings ) {
+				PacketPlayInSettings settings = ( PacketPlayInSettings ) packet;
+				Cartographer.getInstance().getPlayerManager().setLocale( viewer.getUniqueId(), settings.a() );
 			}
 		}
 		return packet;

@@ -5,15 +5,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import org.apache.commons.lang.Validate;
 
 import io.github.bananapuncher714.cartographer.core.api.events.module.ModuleDisableEvent;
 import io.github.bananapuncher714.cartographer.core.api.events.module.ModuleEnableEvent;
 import io.github.bananapuncher714.cartographer.core.api.events.module.ModuleLoadEvent;
-import io.github.bananapuncher714.cartographer.core.api.setting.SettingState;
-import io.github.bananapuncher714.cartographer.core.map.MapViewer;
+import io.github.bananapuncher714.cartographer.core.locale.LocaleConstants;
 import io.github.bananapuncher714.cartographer.core.module.Module;
 import io.github.bananapuncher714.cartographer.core.module.ModuleDescription;
 import io.github.bananapuncher714.cartographer.core.module.ModuleLoader;
@@ -25,7 +23,7 @@ public class ModuleManager {
 	protected Map< String, Module > modules = new HashMap< String, Module >();
 	protected File moduleFolder;
 	
-	protected Logger logger = new CartographerLogger( "ModuleManager" );
+	protected CartographerLogger logger = new CartographerLogger( "ModuleManager" );
 	
 	protected ModuleManager( Cartographer plugin, File moduleFolder ) {
 		this.plugin = plugin;
@@ -36,7 +34,7 @@ public class ModuleManager {
 	
 	protected void terminate() {
 		disableModules();
-		unloadModules();
+		unloadModules( false );
 	}
 	
 	public void registerModule( Module module ) {
@@ -49,16 +47,16 @@ public class ModuleManager {
 	}
 	
 	public void reload() {
-		logger.info( "Reloading modules..." );
-		unloadModules();
+		logger.infoTr( LocaleConstants.MANAGER_MODULE_RELOAD_START );
+		unloadModules( true );
 		loadModules();
 		enableModules();
-		logger.info( "Done reloading modules");
+		logger.infoTr( LocaleConstants.MANAGER_MODULE_RELOAD_FINISH );
 	}
 	
 	public Module loadModule( File file ) {
 		ModuleDescription description = loader.getDescriptionFor( file );
-		logger.info( "Loading " + description.getName() + " v" + description.getVersion() + " by " + description.getAuthor() );
+		logger.infoTr( LocaleConstants.MANAGER_MODULE_LOADING, description.getName(), description.getVersion(), description.getAuthor() );
 		
 		Module module = loader.load( description );
 		
@@ -97,26 +95,36 @@ public class ModuleManager {
 		new ModuleLoadEvent( module ).callEvent();
 	}
 	
-	protected void unloadModules() {
+	protected void unloadModules( boolean reloadLocale ) {
 		Set< String > keys = new HashSet< String >( modules.keySet() );
 		for ( String id : keys ) {
 			Module module = modules.get( id );
 			
-			unloadModule( module );
+			unloadModule( module, false );
+		}
+		if ( reloadLocale ) {
+			plugin.getLocaleManager().reload();
 		}
 	}
 	
-	public boolean unloadModule( Module module ) {
+	public boolean unloadModule( Module module, boolean reloadLocale ) {
 		module.unload();
 		
 		disableModule( module );
 		
-		logger.info( "Unloading " + module.getName() );
+		logger.infoTr( LocaleConstants.MANAGER_MODULE_UNLOADING, module.getName() );
 		if ( !loader.unload( module ) ) {
 			return false;
 		}
 		
 		modules.remove( module.getName() );
+
+		if ( reloadLocale ) {
+			// Reload the locale manager and clear out any changes
+			// that it may have made or added
+			plugin.getLocaleManager().reload();
+		}
+		
 		return true;
 	}
 	
@@ -147,15 +155,11 @@ public class ModuleManager {
 			}
 		}
 		if ( allDependenciesLoaded ) {
-			logger.info( "Enabling " + description.getName() + " v" + description.getVersion() + " by " + description.getAuthor() );
-			for ( SettingState< ? > state : module.getSettingStates() ) {
-				MapViewer.addSetting( state );
-			}
-			plugin.getCommand().rebuildCommand();
+			logger.infoTr( LocaleConstants.MANAGER_MODULE_ENABLING, description.getName(), description.getVersion(), description.getAuthor() );
 			module.setEnabled( true );
 			new ModuleEnableEvent( module ).callEvent();
 		} else {
-			logger.info( "Unable to enable " + description.getName() + " due to the missing dependencies: " + missingDeps.toString().trim() );
+			logger.warningTr( LocaleConstants.MANAGER_MODULE_MISSING_DEPENDENCIES, description.getName(), missingDeps.toString().trim() );
 			return false;
 		}
 		return true;
@@ -175,13 +179,10 @@ public class ModuleManager {
 		if ( module.isEnabled() ) {
 			ModuleDescription description = module.getDescription();
 			new ModuleDisableEvent( module ).callEvent();
-			logger.info( "Disabling " + description.getName() + " v" + description.getVersion() + " by " + description.getAuthor() );
+			logger.infoTr( LocaleConstants.MANAGER_MODULE_DISABLING, description.getName(), description.getVersion(), description.getAuthor() );
 			module.setEnabled( false );
-			for ( SettingState< ? > state : module.getSettingStates() ) {
-				MapViewer.removeSetting( state );
-			}
-			plugin.getCommand().rebuildCommand();
 			loader.disable( module );
+			plugin.getCommand().rebuildCommand();
 			return true;
 		}
 		return false;

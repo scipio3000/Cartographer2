@@ -3,7 +3,6 @@ package io.github.bananapuncher714.cartographer.core;
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,6 +15,7 @@ import io.github.bananapuncher714.cartographer.core.api.events.minimap.MinimapDe
 import io.github.bananapuncher714.cartographer.core.api.events.minimap.MinimapLoadEvent;
 import io.github.bananapuncher714.cartographer.core.api.events.minimap.MinimapUnloadEvent;
 import io.github.bananapuncher714.cartographer.core.api.events.renderer.CartographerRendererCreateEvent;
+import io.github.bananapuncher714.cartographer.core.locale.LocaleConstants;
 import io.github.bananapuncher714.cartographer.core.map.MapSettings;
 import io.github.bananapuncher714.cartographer.core.map.Minimap;
 import io.github.bananapuncher714.cartographer.core.map.menu.MapInteraction;
@@ -31,7 +31,7 @@ public class MinimapManager {
 	protected Cartographer plugin;
 	protected Map< String, Minimap > minimaps = new ConcurrentHashMap< String, Minimap >();
 
-	protected Logger logger = new CartographerLogger( "MapManager" );
+	protected CartographerLogger logger = new CartographerLogger( "MapManager" );
 	
 	public MinimapManager( Cartographer plugin ) {
 		this.plugin = plugin;
@@ -52,6 +52,19 @@ public class MinimapManager {
 		}
 		
 		ItemStack mapItem = plugin.getHandler().getUtil().getMapItem( getId( view ) );
+		
+		convert( view, map );
+		
+		String id = map == null ? "MISSING MAP" : map.getId();
+		mapItem = NBTEditor.set( mapItem, id, MAP_ID );
+		
+		return mapItem;
+	}
+	
+	public ItemStack getItemFor( Minimap map, int mapId ) {
+		MapView view = plugin.getHandler().getUtil().getMap( mapId );
+
+		ItemStack mapItem = plugin.getHandler().getUtil().getMapItem( mapId );
 		
 		convert( view, map );
 		
@@ -149,7 +162,7 @@ public class MinimapManager {
 	}
 	
 	public Minimap constructNewMinimap( String id ) {
-		logger.info( "Loading minimap '" + id + "'" );
+		logger.infoTr( LocaleConstants.MANAGER_MINIMAP_LOADING, id );
 		File dir = plugin.getAndConstructMapDir( id );
 		File config = new File( dir + "/" + "config.yml" );
 		MapSettings settings = new MapSettings( YamlConfiguration.loadConfiguration( config ) );
@@ -170,7 +183,7 @@ public class MinimapManager {
 	}
 	
 	public Minimap constructNewMinimap( File dir ) {
-		logger.info( "Loading minimap '" + dir.getName() + "'" );
+		logger.infoTr( LocaleConstants.MANAGER_MINIMAP_LOADING, dir.getName() );
 		plugin.saveMapFiles( dir );
 		File config = new File( dir + "/" + "config.yml" );
 		MapSettings settings = new MapSettings( YamlConfiguration.loadConfiguration( config ) );
@@ -187,7 +200,7 @@ public class MinimapManager {
 	}
 	
 	public void unload( Minimap map ) {
-		logger.info( "Unloading minimap '" + map.getId() + "'" );
+		logger.infoTr( LocaleConstants.MANAGER_MINIMAP_UNLOADING, map.getId() );
 		new MinimapUnloadEvent( map ).callEvent();
 		
 		minimaps.remove( map.getId() );
@@ -197,7 +210,7 @@ public class MinimapManager {
 	}
 	
 	public void remove( Minimap map ) {
-		logger.info( "Deleting minimap '" + map.getId() + "'" );
+		logger.infoTr( LocaleConstants.MANAGER_MINIMAP_DELETING, map.getId() );
 		new MinimapDeleteEvent( map ).callEvent();
 		
 		minimaps.remove( map.getId() );

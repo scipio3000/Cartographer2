@@ -3,10 +3,10 @@ package io.github.bananapuncher714.cartographer.core.implementation.v1_10_R1;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -25,7 +25,7 @@ import org.bukkit.map.MapCursor.Type;
 import io.github.bananapuncher714.cartographer.core.Cartographer;
 import io.github.bananapuncher714.cartographer.core.api.GeneralUtil;
 import io.github.bananapuncher714.cartographer.core.api.PacketHandler;
-import io.github.bananapuncher714.cartographer.core.internal.Util_1_8;
+import io.github.bananapuncher714.cartographer.core.internal.Util_1_9;
 import io.github.bananapuncher714.cartographer.core.map.menu.MapInteraction;
 import io.github.bananapuncher714.cartographer.core.map.palette.MinimapPalette;
 import io.github.bananapuncher714.cartographer.core.util.CrossVersionMaterial;
@@ -40,6 +40,7 @@ import net.minecraft.server.v1_10_R1.MinecraftKey;
 import net.minecraft.server.v1_10_R1.MinecraftServer;
 import net.minecraft.server.v1_10_R1.PacketPlayInBlockDig;
 import net.minecraft.server.v1_10_R1.PacketPlayInBlockDig.EnumPlayerDigType;
+import net.minecraft.server.v1_10_R1.PacketPlayInSettings;
 import net.minecraft.server.v1_10_R1.PacketPlayOutMap;
 
 public class NMSHandler implements PacketHandler {
@@ -70,7 +71,7 @@ public class NMSHandler implements PacketHandler {
 	}
 
 	private final Set< Integer > maps = new TreeSet< Integer >();
-	private Util_1_8 util = new Util_1_8();
+	private Util_1_9 util = new Util_1_9();
 	
 	@Override
 	public void sendDataTo( int id, byte[] data, @Nullable MapCursor[] cursors, UUID... uuids ) {
@@ -137,21 +138,26 @@ public class NMSHandler implements PacketHandler {
 	
 	@Override
 	public Object onPacketInterceptIn( Player viewer, Object packet ) {
-		if ( packet instanceof PacketPlayInBlockDig ) {
-			// Check for the drop packet
-			PacketPlayInBlockDig digPacket = ( PacketPlayInBlockDig ) packet;
-
-			EnumPlayerDigType type = digPacket.c();
-			if ( type == EnumPlayerDigType.DROP_ALL_ITEMS || type == EnumPlayerDigType.DROP_ITEM ) {
-				ItemStack item = viewer.getEquipment().getItemInMainHand();
-				if ( Cartographer.getInstance().getMapManager().isMinimapItem( item ) ) {
-					// Update the player's hand
-					viewer.getEquipment().setItemInMainHand( item );
-					
-					// Activate the drop
-					Cartographer.getInstance().getMapManager().activate( viewer, type == EnumPlayerDigType.DROP_ALL_ITEMS ? MapInteraction.CTRLQ : MapInteraction.Q );
-					return null;
+		if ( viewer != null ) {
+			if ( packet instanceof PacketPlayInBlockDig && Cartographer.getInstance().isPreventDrop() && Cartographer.getInstance().isUseDropPacket() ) {
+				// Check for the drop packet
+				PacketPlayInBlockDig digPacket = ( PacketPlayInBlockDig ) packet;
+	
+				EnumPlayerDigType type = digPacket.c();
+				if ( type == EnumPlayerDigType.DROP_ALL_ITEMS || type == EnumPlayerDigType.DROP_ITEM ) {
+					ItemStack item = viewer.getEquipment().getItemInMainHand();
+					if ( Cartographer.getInstance().getMapManager().isMinimapItem( item ) ) {
+						// Update the player's hand
+						viewer.getEquipment().setItemInMainHand( item );
+						
+						// Activate the drop
+						Cartographer.getInstance().getMapManager().activate( viewer, type == EnumPlayerDigType.DROP_ALL_ITEMS ? MapInteraction.CTRLQ : MapInteraction.Q );
+						return null;
+					}
 				}
+			} else if ( packet instanceof PacketPlayInSettings ) {
+				PacketPlayInSettings settings = ( PacketPlayInSettings ) packet;
+				Cartographer.getInstance().getPlayerManager().setLocale( viewer.getUniqueId(), settings.a() );
 			}
 		}
 		return packet;
